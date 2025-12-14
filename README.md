@@ -1,6 +1,7 @@
-# Meta1D
-Meta 1D 
-👥 Team Members
+# Meta: Finding Dataset Bias using Language Models
+
+## Meta 1D 
+### 👥 Team Members
 | Name             | GitHub Handle | Contribution                                                             |
 |-------------------|----------------|--------------------------------------------------------------------------|
 | Yuling Liu        | @yuuuu1ing     | Data exploration, visualization, overall project coordination            |
@@ -11,48 +12,222 @@ Meta 1D
 | Daniela Suqui     | @danielasqui   | Model evaluation, performance analysis, results interpretation           |
 
 
-
-🎯 Project Highlights
+## 🎯 Project Highlights
 
 - Developed NLP techniques to detect and quantify social biases in text datasets using word embeddings and classification models.
 - Identified biased semantic relationships and evaluated their impact on model predictions, supporting Meta’s Responsible AI initiatives.
 - Created heatmaps, embedding plots, and bias trend metrics to clearly communicate findings.
 - Delivered a fully documented, reproducible codebase aligned with ethical AI standards.
 
-👩🏽‍💻 Setup and Installation
+
+## 👩🏽‍💻 Setup and Installation
+
+- Clone the repository 
+- Run the pipeline: Meta1D_RedditBias.ipynb
+- All files and installations are included in the file and repository.
 
 
-
-
-🏗️ Project Overview
+## 🏗️ Project Overview
 
 This project was completed as part of the Break Through Tech AI Program in partnership with Meta.
 
-Objective
+### Objective
 
 - Identify and analyze social biases present in NLP datasets, understand how they influence model outputs, and evaluate techniques for interpreting or mitigating bias.
   
-Scope
+### Scope
 
 - Detect biased terms and associations
 - Use word embeddings to visualize semantic relationships
 - Train simple classifiers to observe bias-driven prediction patterns
 - Document findings and provide visual tools for interpretability
 
-Real-World Significance
+### Real-World Significance
 
 - Bias in training data can perpetuate harmful stereotypes and lead to inequitable AI systems. Because Meta's platforms serve billions globally, mitigating dataset bias is essential for safety, fairness, and compliance with ethical AI standards.
 
-📊 Data Exploration
+
+## 📊 Data Exploration
+
+### Datasets Used
+
+**RedditBias Dataset**
+- **Source:** https://github.com/umanlp/RedditBias/tree/master
+- **Size:** ~27,000 samples across five bias categories
+- **Structure:** CSV files containing Reddit comments with bias annotations
+  - comment: Text content from Reddit
+  - bias_sent: Binary label (0 = not biased, 1 = biased)
+  - bias_type: Category of bias (gender, orientation, race, religion)
+- **Purpose:** Primary training dataset for bias detection models
+
+**CrowS-Pairs Benchmark**
+- **Source:** https://github.com/nyu-mll/crows-pairs
+- **Size:** Filtered to relevant bias types (gender, race-color, religion, sexual orientation)
+- **Structure:** Sentence pairs testing stereotypical vs. anti-stereotypical associations
+  - sent_more: More stereotypical sentence
+  - sent_less: Less stereotypical sentence
+  - stereo_antistereo: Label indicating stereotypical nature
+- **Purpose:** External validation dataset to test model generalization beyond Reddit-specific language 
+
+### Data Preprocessing
+**Text Cleaning**
+- Removed empty or invalid entries
+- Ensured all text fields were properly formatted as strings
+- Retained only binary class labels, excluding any ambiguous annotations
+
+**Dataset Splitting**
+- Applied stratified sampling to maintain proportional representation of both bias labels and bias types
+- Created custom stratification column combining bias_sent and bias_type for balanced splits
+- Split: 80% training, 20% validation
+- Random seed: 42 for reproducibility
+
+**Tokenization**
+- BERT tokenization: Used bert-base-uncased tokenizer with max_length=128, padding='max_length', truncation=True
+- RoBERTa tokenization: Used roberta-base tokenizer with identical parameters
+- Applied dynamic padding via DataCollatorWithPadding for efficient batching
+
+**Pseudo-Labeling for Data Expansion**
+- Separated labeled data from unlabeled data
+- Implemented iterative pseudo-labeling with confidence threshold of 0.95
+- Process:
+  - Predicted labels on unlabeled samples using fine-tuned BERT model
+  - Selected high-confidence predictions (probability ≥ 0.95)
+  - Added pseudo-labeled samples to training set
+  - Retrained model on expanded dataset
+  - Repeated for 3 iterations maximum
+
+**Class Imbalance Handling**
+- Used stratified splitting to maintain natural class distribution across train/validation sets
+- Verified proportional representation of all bias categories in both splits
+- Applied class weights during hyperparameter tuning (weight_decay parameter)
+
+**Key Assumptions**
+- Binary classification (biased vs. not biased) is sufficient for detecting demographic bias
+- Reddit comment language patterns generalize to other text sources (tested via CrowS-Pairs)
+- High-confidence pseudo-labels (≥95% probability) are reliable for expanding training data
+- Combining different bias types (gender, race, religion, orientation) into a single model improves overall bias detection capability
 
 
-🧠 Model Development
+### Exploratory Data Analysis Insights
+
+**Figure 1: Distribution of Bias Categories**
+<img width="989" height="490" alt="image" src="https://github.com/user-attachments/assets/c6a682d5-f145-48c0-90d1-e86b71b9e5d7" />
+
+*Key Insight: The RedditBias dataset shows significant class imbalance, with religion-related biases (religion2: ~10,500 samples) representing nearly 3x more data than gender (~3,000) or race (~3,000) biases.*  
+
+--- 
+
+**Figure 2: Distribution of Bias Labels**
+
+<img width="549" height="393" alt="image" src="https://github.com/user-attachments/assets/b875afe0-5722-46d7-9cab-9ada5793721f" />
+
+*Key Insight: The dataset shows class imbalance with 43% biased samples vs 57% non-biased samples, requiring stratified sampling to ensure representative train/validation splits.*
 
 
-📈 Results & Key Findings
+## 🧠 Model Development
+
+### Model Selection Justification
+We selected **BERT** and **RoBERTa** for the following reasons:
+- Pre-trained transformer models with strong contextual understanding of language
+- Proven effectiveness on text classification and bias detection tasks
+- Different architectural approaches (BERT's masked language modeling vs. RoBERTa's dynamic masking) allow comparison of generalization capabilities
+- Well-suited for detecting subtle linguistic biases in social media text
+- Available through HuggingFace's transformers library with community support
+
+### Technical Approach
+
+**Architecture:**
+- Fine-tuned BERT-base-uncased and RoBERTa-base models
+- Added sequence classification head for binary bias detection (biased vs. not biased)
+- Used AutoModelForSequenceClassification with 2 output labels
+- No custom layer modifications: leveraged pre-trained architectures as-is
+
+**Training Process:**
+1. Initial fine-tuning on RedditBias dataset baseline hyperparameters
+2. Hyperparameter optimization using Optuna framework (20 trials) to find optimal:
+   - learning rate, batch size, number of epochs, weight decay, warmup steps
+3. Applied pseudo-labeling iteration to expand training data:
+   - Predicted labels on unlabeled Reddit comments with 95% confidence threshold
+   - Added high-confidence predictions to training set
+   - Retrained model on expanded dataset
+4. External validation on CrowS-Pairs benchmark to assess generalization
+5. Iterative refinement with early stopping and best model checkpointing
+
+**Key Hyperparameters:**
+BERT (Baseline):
+- Learning rate: 2e-5
+- Batch size: 16 (per device)
+- Epochs: 3
+- Weight decay: 0.01
+- Max sequence length: 128
+- Optimizer: AdamW
+- Evaluation strategy: Per epoch
+
+BERT (Tuned via Optuna):
+- Learning rate: Optimized between 1e-5 and 5e-5
+- Batch size: Optimized among 8, 16, 32
+- Epochs: Optimized between 2-5
+- Weight decay: Optimized between 0.0-0.1
+- Warmup steps: Optimized between 0-1000
+
+RoBERTa (Baseline):
+- Learning rate: 1e-5 (lower than BERT to account for different architecture)
+- Batch size: 16 (per device)
+- Epochs: 3
+- Weight decay: 0.05 (higher than BERT baseline)
+- Max sequence length: 128
+
+RoBERTa (Tuned via Optuna):
+- Learning rate: Optimized between 1e-5 and 5e-5
+- Batch size: Optimized among 8, 16, 32
+- Epochs: Optimized between 4-7, higher range than BERT
+- Weight decay: Optimized between 0.0-0.1
+- Warmup steps: Optimized between 0-1000
+
+## ⭐️ Code Highlights
+
+- **Data Loading & Preparation (Cells 1-18):** Loading RedditBias datasets from multiple CSV files, combining bias categories, splitting into labeled/unlabeled data, stratified train/validation split
+- **BERT Training Pipeline (Cells 30-54):** Tokenization with BERT tokenizer, model initialization, baseline training, hyperparameter tuning with Optuna, pseudo-labeling implementation, final model saving
+- **CrowS-Pairs External Validation (Cells 57-62):** Loading and preprocessing CrowS-Pairs benchmark, evaluating BERT on external dataset, computing cross-dataset performance metrics
+- **RoBERTa Training Pipeline (Cells 68-88):** RoBERTa tokenization, training on pseudo-labeled expanded dataset, hyperparameter optimization, model evaluation and comparison
+- **RoBERTa External Validation (Cells 90-94):** Evaluating RoBERTa generalization on CrowS-Pairs, comparing cross-model performance
+- **Comprehensive Visualizations (Cells 97-106):** Model performance comparisons, confusion matrices, bias type breakdowns, hyperparameter impact analysis, external dataset performance charts
 
 
-🚀 Next Steps
+## 📈 Results & Key Findings
+
+### Model Performance Summary 
+
+**RedditBias Dataset (Internal Validation)**
+<img width="523" height="78" alt="Screenshot 2025-12-14 at 4 42 14 PM" src="https://github.com/user-attachments/assets/0b557d7a-e50b-4e0a-836c-6e3305a514f9" />
+
+
+**CrowS-Pairs Dataset (External Validation)**
+img1
+img2
+
+
+
+
+
+## 💭 Discussion and Reflection
+
+### What Worked
+- **BERT's architecture proved highly effective** for capturing bias patterns in Reddit data, achieving 96.04% accuracy on the validation set - significantly outperforming our initial expectations and baseline models.
+- **Pseudo-labeling successfully expanded training data** through iterative semi-supervised learning. Over 3 iterations with a 95% confidence threshold, we added high-confidence predictions from unlabeled Reddit comments, which improved model robustness and reduced overfitting to the initial labeled dataset.
+- **Hyperparameter optimization using Optuna** yielded meaningful performance gains. Systematic tuning of learning rate, batch size, epochs, weight decay, and warmup steps improved F1-scores and helped both models converge more effectively.
+- **Stratified sampling** maintained balanced representation across both bias labels and bias types (gender, race, religion, orientation), ensuring models learned to detect all forms of demographic bias rather than just the most common categories.
+- **Multi-dataset validation** provided critical insights into model generalization beyond Reddit-specific language, revealing important limitations in cross-domain transfer.
+
+### Challenges Encountered
+- **RoBERTa's lower generalization:** Despite RoBERTa's theoretical advantages, it achieved only 89.05% accuracy compared to BERT's 96.04%. The ~7% performance gap suggests BERT's architecture may be better suited for the linguistic patterns in social media bias detection, or that RoBERTa requires different fine-tuning strategies.
+- **Dataset specificity and domain shift:** Both models showed performance degradation on external validation compared to in-domain data, indicating potential overfitting to Reddit-specific language patterns. This highlights the challenge of building bias detectors that generalize across different text sources.
+- **Class imbalance across bias categories:** Religious bias had 10,500+ samples while gender and race had only ~3,000 each. Despite stratified sampling, this imbalance may have caused models to be more sensitive to religious bias patterns while underperforming on underrepresented categories
+
+### Why These Results Matter
+The accuracy gap between BERT and RoBERTa highlights that theoretically superior models don't always outperform on specialized tasks like bias detection. Task-specific evaluation is essential, and architectural choices should be validated empirically rather than assumed based on general benchmarks.
+
+## 🚀 Next Steps
 
 - Expand datasets (especially religion-related biases; add non-Reddit sources).
 - Test larger transformer models (e.g., RoBERTa-large).
@@ -60,11 +235,9 @@ Real-World Significance
 - Conduct deeper error analysis to reduce false positives/negatives.
 - Improve user-facing prototype for wider deployment.
 
-📝 License
+## 📝 License
 
-📄 References
-
-🙏 Acknowledgements
+## 🙏 Acknowledgements
 
 - Megan Ung, Meta Challenge Advisor
 - Candace Ross, Meta Challenge Advisor
