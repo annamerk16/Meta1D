@@ -22,9 +22,13 @@
 
 ## 👩🏽‍💻 Setup and Installation
 
-- Clone the repository 
-- Run the pipeline: Meta1D_RedditBias.ipynb
-- All files and installations are included in the file and repository.
+**Note:** This project was developed as a single comprehensive Jupyter notebook containing all code, analysis, and visualizations.
+
+### How to Run
+1. Clone the repository
+2. Open `Meta1D_RedditBias.ipynb` 
+3. Run all cells in sequence
+4. All required installations and dependencies are included in the notebook
 
 
 ## 🏗️ Project Overview
@@ -326,7 +330,12 @@ RoBERTa (Tuned via Optuna):
 - **Class imbalance across bias categories:** Religious bias had 10,500+ samples while gender and race had only ~3,000 each. Despite stratified sampling, this imbalance may have caused models to be more sensitive to religious bias patterns while underperforming on underrepresented categories
 
 ### Why These Results Matter
-The accuracy gap between BERT and RoBERTa highlights that theoretically superior models don't always outperform on specialized tasks like bias detection. Task-specific evaluation is essential, and architectural choices should be validated empirically rather than assumed based on general benchmarks.
+
+- **For Meta's Responsible AI initiatives:** These findings demonstrate that while transformer models can effectively detect demographic bias in text, model selection and training strategies significantly impact real-world performance. 
+
+- **For the broader NLP community:** The accuracy gap between BERT and RoBERTa highlights that newer or theoretically superior models don't always outperform on specialized tasks like bias detection. Task-specific evaluation is essential, and architectural choices should be validated empirically rather than assumed based on general benchmarks.
+
+- **Moving forward:** These results emphasize the importance of external validation, diverse datasets, and careful consideration of how training data characteristics influence model behavior in bias-critical applications.
 
 ## 🚀 Next Steps
 
