@@ -199,16 +199,117 @@ RoBERTa (Tuned via Optuna):
 ### Model Performance Summary 
 
 **RedditBias Dataset (Internal Validation)**
-<img width="523" height="78" alt="Screenshot 2025-12-14 at 4 42 14 PM" src="https://github.com/user-attachments/assets/0b557d7a-e50b-4e0a-836c-6e3305a514f9" />
+
+| Model | Accuracy | F1-Score | Precision | Recall |
+|-------|----------|----------|-----------|--------|
+| **BERT (Tuned)** | **95.26%** | **95.88%** | **95.69%** | **96.06%** |
+| **RoBERTa (Tuned)** | **82.58%** | **85.43%** | **81.92%** | **89.26%** |
+
+*Performance on RedditBias validation set after hyperparameter optimization*
 
 
 **CrowS-Pairs Dataset (External Validation)**
-img1
-img2
+
+| Model | Overall Accuracy | F1-Score | Sample Count |
+|-------|------------------|----------|--------------|
+| **BERT** | **49.6%** | **61.2%** | 883 samples |
+| **RoBERTa** | **49.84%** | **61.54%** | 967 samples |
+
+*Cross-dataset generalization performance on external benchmark*
+
+#### Performance by Bias Category (CrowS-Pairs)
+
+| Bias Type | BERT Accuracy | RoBERTa Accuracy | BERT F1 | RoBERTa F1 | Better Model |
+|-----------|---------------|------------------|---------|------------|--------------|
+| **Gender** | 51.9% | 49.6% | 0.530 | 0.566 | BERT |
+| **Race-Color** | 45.2% | 56.6% | 0.603 | 0.711 | RoBERTa (+11.4%) |
+| **Religion** | 65.7% | 72.4% | 0.783 | 0.830 | RoBERTa (+6.7%) |
+| **Sexual Orientation** | 52.4% | 59.5% | 0.649 | 0.721 | RoBERTa (+7.1%) |
+| **AVERAGE** | **53.8%** | **59.5%** | **0.641** | **0.707** | **RoBERTa (+5.7%)** |
+
+### Visual Results
+
+**Figure 3: BERT vs RoBERTa Performance on RedditBias**
+
+<img width="461" height="287" alt="Screenshot 2025-12-14 at 5 01 33 PM" src="https://github.com/user-attachments/assets/c8790149-8164-4d1b-9cb8-ecfc28b69768" />
+
+*BERT significantly outperformed RoBERTa on the Reddit training dataset across all metrics, achieving 95.26% accuracy compared to RoBERTa's 82.58%.*
+
+---
+
+**Figure 4: Performance Breakdown by Bias Type**
+
+<img width="482" height="282" alt="Screenshot 2025-12-14 at 5 02 12 PM" src="https://github.com/user-attachments/assets/5b47c97f-7cdb-4b46-b8a4-6452f595846f" />
+
+*Performance varied significantly across demographic categories, with religion-based bias detection achieving highest accuracy (65.7-72.4%), correlating with larger training sample sizes (10,500+ samples).*
+
+---
+
+**Figure 5: Confusion Matrices - BERT vs RoBERTa**
+
+<img width="635" height="275" alt="Screenshot 2025-12-14 at 5 03 30 PM" src="https://github.com/user-attachments/assets/0b5c395b-51c2-4581-afb8-374f0ba82791" />
+
+**BERT (Tuned) Confusion Matrix Results:**
+- True Negatives: 916 | True Positives: 1,219
+- False Positives: 100 | False Negatives: 64
+
+**RoBERTa (Tuned) Confusion Matrix Results:**
+- True Negatives: 861 | True Positives: 1,157
+- False Positives: 232 | False Negatives: 203
+
+*BERT showed superior classification accuracy with fewer misclassifications, particularly achieving 64 false negatives compared to RoBERTa's 203.*
+
+---
+
+**Figure 6: Cross-Dataset Performance Comparison**
+
+<img width="633" height="363" alt="Screenshot 2025-12-14 at 5 04 11 PM" src="https://github.com/user-attachments/assets/9000a8a0-2589-45e9-bd0f-5444ae49dd58" />
 
 
+*Both models experienced significant performance degradation on external validation:*
+- BERT: F1 dropped from 0.830 (Reddit) to 0.552 (CrowS-Pairs) - **28% decrease**
+- RoBERTa: F1 dropped from 0.823 (Reddit) to 0.552 (CrowS-Pairs) - **27% decrease**
 
+*This domain shift indicates models learned Reddit-specific linguistic patterns rather than fully generalizable bias detection capabilities.*
 
+---
+
+### Key Findings
+
+**1. BERT Dominated on Reddit Data, But RoBERTa Generalized Better**
+- **On RedditBias:** BERT achieved 95.26% accuracy vs RoBERTa's 82.58% - BERT won by **12.68 percentage points**
+- **On CrowS-Pairs:** RoBERTa averaged 59.5% accuracy vs BERT's 53.8% - RoBERTa won by **5.7 percentage points**
+- **Insight:** This represents a **generalization vs. memorization trade-off** - BERT memorized Reddit-specific patterns better, while RoBERTa learned more transferable bias concepts
+
+**2. Cross-Dataset Generalization Remains a Major Challenge**
+- Both models experienced ~33% F1-score drops when tested on CrowS-Pairs external dataset
+- Performance on external validation (49-50% accuracy) barely exceeded random baseline (50%)
+- Indicates models learned Reddit-specific linguistic patterns (slang, discourse style) rather than universal bias markers
+- Domain shift between casual Reddit comments and constructed CrowS-Pairs sentences significantly impacted performance
+
+**3. Training Data Size Directly Correlates with Detection Accuracy**
+- **Religion biases** (10,500+ training samples) achieved highest accuracy: 65.7% (BERT), 72.4% (RoBERTa)
+- **Sexual orientation** (8,000 samples) showed moderate performance: 52.4% (BERT), 59.5% (RoBERTa)
+- **Gender & race** (~3,000 samples each) showed lowest performance: 45.2-51.9%
+- **Clear pattern:** More training data = better bias detection capability
+
+**4. Pseudo-Labeling Successfully Expanded Training Data**
+- Completed 3 iterations with 95% confidence threshold
+- **Iteration 1:** Added 5,673 high-confidence samples
+- **Iteration 2:** Added 6,226 high-confidence samples  
+- **Iteration 3:** Added 2,916 high-confidence samples
+- **Total expansion:** ~15,000 additional training samples improved model robustness
+
+**5. RoBERTa's Advantage on Underrepresented Categories**
+- RoBERTa showed **+11.4% improvement on race-color** bias detection compared to BERT
+- Dynamic masking and larger pre-training corpus helped generalize to racial bias patterns
+- Demonstrates RoBERTa's strength in **few-shot learning** scenarios with limited training data
+
+**6. Class Imbalance Significantly Impacts Model Performance**
+- Dataset composition: ~60% biased vs ~40% not biased samples
+- Religion2 category alone comprised nearly 40% of all training data
+- Despite stratified sampling, models showed bias toward over-represented categories
+- Performance disparity across categories highlights critical need for balanced datasets
 
 ## 💭 Discussion and Reflection
 
