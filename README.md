@@ -346,7 +346,7 @@ RoBERTa (Tuned via Optuna):
 - Improve user-facing prototype for wider deployment.
 
 ## 📝 License
-
+This project is licensed under the MIT License – see the LICENSE file for details.
 ## 🙏 Acknowledgements
 
 - Megan Ung, Meta Challenge Advisor
